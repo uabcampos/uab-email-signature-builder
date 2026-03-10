@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UAB Email Signature Builder</title>
+  <style>
+    :root {
+      --uab-green: #1e6b52;
+      --uab-green-deep: #154f3d;
+      --uab-green-soft: #e8f2ee;
+      --uab-gold: #c99700;
+      --ink: #101828;
+      --muted: #475467;
+      --line: #d0d5dd;
+      --paper: #ffffff;
+      --canvas: #f4f7f5;
+      --shadow: 0 24px 60px rgba(16, 24, 40, 0.12);
+      --radius: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(201, 151, 0, 0.12), transparent 22%),
+        radial-gradient(circle at top right, rgba(30, 107, 82, 0.18), transparent 28%),
+        linear-gradient(180deg, #edf4f1 0%, #f8faf8 100%);
+      min-height: 100vh;
+    }
+
+    a {
+      color: var(--uab-green);
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 0.95fr) minmax(420px, 1.05fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(208, 213, 221, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-header {
+      padding: 20px 22px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(232, 242, 238, 0.72), rgba(255, 255, 255, 0));
+    }
+
+    .panel-header h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-header p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .panel-body {
+      padding: 20px 22px 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--uab-green);
+      box-shadow: 0 0 0 4px rgba(30, 107, 82, 0.12);
+    }
+
+    .note,
+    .rule-list li,
+    .instruction-list li,
+    .plain-output {
+      line-height: 1.5;
+    }
+
+    .microcopy {
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .toggle-group,
+    .actions,
+    .client-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .toggle input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--uab-green);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--uab-green);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(30, 107, 82, 0.18);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn-tab {
+      background: #eef3f0;
+      color: var(--muted);
+      border: 1px solid transparent;
+      padding: 10px 14px;
+    }
+
+    .btn-tab.is-active {
+      background: var(--uab-green);
+      color: #fff;
+    }
+
+    .preview-shell {
+      background:
+        linear-gradient(180deg, rgba(30, 107, 82, 0.06), rgba(30, 107, 82, 0)),
+        var(--canvas);
+      min-height: 420px;
+    }
+
+    .preview-stage {
+      padding: 22px;
+    }
+
+    .preview-card {
+      background: var(--paper);
+      border: 1px solid #e4e7ec;
+      border-radius: 18px;
+      box-shadow: 0 18px 42px rgba(16, 24, 40, 0.1);
+      overflow: hidden;
+    }
+
+    .preview-mailbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #e4e7ec;
+      background: linear-gradient(180deg, #f8faf8, #f0f4f2);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .preview-mailbar strong {
+      color: var(--ink);
+    }
+
+    .preview-body {
+      padding: 24px 22px 28px;
+      background:
+        linear-gradient(180deg, rgba(30, 107, 82, 0.02), transparent 80%),
+        #fff;
+    }
+
+    .preview-context {
+      color: #667085;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .signature-frame {
+      border: 1px dashed #c7d2cc;
+      border-radius: 14px;
+      padding: 18px;
+      background: #fff;
+      overflow-x: auto;
+    }
+
+    .status-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .status-card {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .status-card strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .status-ok {
+      border-color: rgba(30, 107, 82, 0.25);
+      background: rgba(30, 107, 82, 0.06);
+    }
+
+    .status-warn {
+      border-color: rgba(201, 151, 0, 0.35);
+      background: rgba(201, 151, 0, 0.08);
+    }
+
+    .rule-list,
+    .instruction-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .rule-list li + li,
+    .instruction-list li + li {
+      margin-top: 8px;
+    }
+
+    .client-panel {
+      display: none;
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(232, 242, 238, 0.5), rgba(255, 255, 255, 1));
+    }
+
+    .client-panel.is-active {
+      display: block;
+    }
+
+    .client-panel h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .output-box {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .output-box header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f8faf9;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .output-box textarea,
+    .plain-output {
+      border: 0;
+      border-radius: 0;
+      min-height: 220px;
+      padding: 14px;
+      font-size: 13px;
+      background: #fff;
+    }
+
+    .plain-output {
+      white-space: pre-wrap;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      color: #344054;
+      overflow: auto;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--uab-gold);
+      background: rgba(201, 151, 0, 0.08);
+      border-radius: 0 14px 14px 0;
+      color: #5f4700;
+      font-size: 14px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1080px) {
+      .layout,
+      .output-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 18px 14px 32px;
+      }
+
+      .panel-body,
+      .panel-header,
+      .preview-stage {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .field-row {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+    }
+  </style>
+</head>
+  <body>
+  <div class="page">
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Build Your Signature</h2>
+          <p>Fields update the preview immediately. The default output now mirrors your approved signature layout, with optional extras still available when needed.</p>
+        </div>
+        <div class="panel-body">
+          <form id="signature-form" class="form-grid">
+            <div class="field-row">
+              <div>
+                <label for="fullName">Full name</label>
+                <input id="fullName" name="fullName" value="Chris Campos" autocomplete="name">
+              </div>
+              <div>
+                <label for="credentials">Credentials</label>
+                <input id="credentials" name="credentials" value="" placeholder="MBA, MD, PhD">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label for="title">Title</label>
+                <input id="title" name="title" value="Communications Specialist">
+              </div>
+              <div>
+                <label for="department">Primary organization line</label>
+                <input id="department" name="department" value="Department of Medicine | Heersink School of Medicine">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label for="unit">Secondary organization line</label>
+                <input id="unit" name="unit" value="Division of General Internal Medicine &amp; Population Science">
+              </div>
+              <div>
+                <label for="email">Email</label>
+                <input id="email" name="email" value="ccampos@uabmc.edu" inputmode="email">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label for="phone">Primary phone</label>
+                <input id="phone" name="phone" value="205.555.5555" placeholder="205.555.5555">
+                <div class="microcopy">Displayed using the selected contact label.</div>
+              </div>
+              <div>
+                <label for="phoneLabel">Phone label</label>
+                <select id="phoneLabel" name="phoneLabel">
+                  <option value="O">O</option>
+                  <option value="P">P</option>
+                  <option value="M">M</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label for="secondaryLabel">Second contact label</label>
+                <select id="secondaryLabel" name="secondaryLabel">
+                  <option value="">None</option>
+                  <option value="M">M</option>
+                  <option value="O">O</option>
+                  <option value="P">P</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
+              <div>
+                <label for="secondaryContact">Second contact value</label>
+                <input id="secondaryContact" name="secondaryContact" placeholder="205-975-2222">
+              </div>
+            </div>
+
+            <div>
+              <label>Address</label>
+              <div class="field-row">
+                <div>
+                  <label for="buildingOffice" class="sr-only">Building and office</label>
+                  <input id="buildingOffice" name="buildingOffice" value="MT516N" placeholder="Building and office">
+                </div>
+                <div>
+                  <label for="street" class="sr-only">Street</label>
+                  <input id="street" name="street" value="1717 11th Ave S" placeholder="Street">
+                </div>
+              </div>
+              <div class="field-row" style="margin-top: 12px;">
+                <div>
+                  <label for="zipCode" class="sr-only">ZIP code</label>
+                  <input id="zipCode" name="zipCode" value="35294" placeholder="ZIP code">
+                </div>
+                <div>
+                  <div class="microcopy" style="margin-top: 12px;">City and state are fixed as Birmingham, AL. Enter only the approved ZIP code for your unit.</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="website">Website</label>
+              <input id="website" name="website" value="uab.edu/medicine/gimaps" placeholder="Optional website">
+            </div>
+
+            <div class="actions">
+              <button type="button" id="copyHtml" class="btn btn-primary">Copy signature HTML</button>
+              <button type="button" id="copyPlain" class="btn btn-secondary">Copy plain text</button>
+              <button type="button" id="downloadHtml" class="btn btn-secondary">Download HTML file</button>
+            </div>
+            <div id="copyStatus" class="microcopy" aria-live="polite"></div>
+          </form>
+
+          <div class="status-grid" aria-live="polite">
+            <div class="status-card status-ok" id="complianceStatus">
+              <strong>Brand guide alignment</strong>
+              <span id="complianceText">This signature uses a Calibri-family stack, stays at 12 pt, and defaults to the supplied standard RTF line order.</span>
+            </div>
+            <div class="status-card status-warn">
+              <strong>Installation note</strong>
+              Copy the HTML into your email client’s signature editor. Mobile mail apps often strip rich formatting, so use the plain text version there when needed.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel preview-shell">
+        <div class="panel-header">
+          <h2>Live Preview</h2>
+          <p>The signature below is rendered the way you should paste it into your email client. The preview body gives you context before installation.</p>
+        </div>
+        <div class="preview-stage">
+          <div class="preview-card">
+            <div class="preview-mailbar">
+              <span><strong>New message</strong> in a desktop email client</span>
+              <span>Rich HTML preview</span>
+            </div>
+            <div class="preview-body">
+              <div class="preview-context">
+                Thank you for your time. Please let me know if you need anything else before the meeting.
+                <br><br>
+                Best,
+              </div>
+              <div class="signature-frame">
+                <div id="signaturePreview"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="output-grid">
+            <section class="output-box">
+              <header>Generated HTML</header>
+              <textarea id="htmlOutput" readonly spellcheck="false"></textarea>
+            </section>
+            <section class="output-box">
+              <header>Plain Text Fallback</header>
+              <div id="plainOutput" class="plain-output"></div>
+            </section>
+          </div>
+
+          <div class="footer-note">
+            Your approved RTF uses this sequence: green bold <strong>Name | Title</strong>, a black school/department line, a black division line, <strong>UAB | The University of Alabama at Birmingham</strong>, a black address/location line, a black contact line with an underlined email, then a separate underlined website line.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="panel" style="margin-top: 24px;">
+      <div class="panel-header">
+        <h2>Install And Configure</h2>
+        <p>Choose the client your users are configuring. The steps below are tailored to the builder output and include default-signature guidance where the client supports it.</p>
+      </div>
+      <div class="panel-body">
+        <div class="client-tabs" role="tablist" aria-label="Email clients">
+          <button type="button" class="btn btn-tab is-active" data-client="outlook-windows">Outlook Windows</button>
+          <button type="button" class="btn btn-tab" data-client="outlook-mac">Outlook Mac</button>
+          <button type="button" class="btn btn-tab" data-client="outlook-web">Outlook Web / New Outlook</button>
+          <button type="button" class="btn btn-tab" data-client="apple-mail">Apple Mail</button>
+          <button type="button" class="btn btn-tab" data-client="mobile">Mobile</button>
+        </div>
+
+        <section class="client-panel is-active" data-panel="outlook-windows">
+          <h3>Outlook for Windows</h3>
+          <ol class="instruction-list">
+            <li>Click <strong>Copy signature HTML</strong> in this tool.</li>
+            <li>In Outlook, go to <strong>File &gt; Options &gt; Mail &gt; Signatures</strong>.</li>
+            <li>Select <strong>New</strong>, give the signature a clear name such as “UAB Official.”</li>
+            <li>Paste into the signature editor. If the formatting looks odd on first paste, click once outside the block and let Outlook finish rendering it.</li>
+            <li>Use the “Choose default signature” dropdowns to apply it to new messages and replies/forwards if desired.</li>
+            <li>Send a test message to yourself and confirm spacing, links, and line breaks.</li>
+          </ol>
+        </section>
+
+        <section class="client-panel" data-panel="outlook-mac">
+          <h3>Outlook for Mac</h3>
+          <ol class="instruction-list">
+            <li>Copy the HTML from this builder.</li>
+            <li>Open <strong>Outlook &gt; Settings &gt; Signatures</strong>.</li>
+            <li>Create a new signature and paste into the editor.</li>
+            <li>Assign it to the correct account and choose whether it should be used for new messages and replies.</li>
+            <li>Send a test email to verify Outlook preserved the contact links and spacing.</li>
+          </ol>
+        </section>
+
+        <section class="client-panel" data-panel="outlook-web">
+          <h3>Outlook on the Web or New Outlook</h3>
+          <ol class="instruction-list">
+            <li>Copy the signature HTML.</li>
+            <li>Go to <strong>Settings &gt; Account &gt; Signatures</strong>.</li>
+            <li>Click <strong>Add Signature</strong>.</li>
+            <li>Enter a name for the signature on the first line.</li>
+            <li>Paste the copied HTML into the editor box below the signature name.</li>
+            <li>Set the options for <strong>default for new messages</strong> and <strong>default for replies and forwards</strong>.</li>
+            <li>Save, then send a message to yourself and review it in both desktop and mobile views.</li>
+          </ol>
+        </section>
+
+        <section class="client-panel" data-panel="apple-mail">
+          <h3>Apple Mail</h3>
+          <ol class="instruction-list">
+            <li>Copy the signature HTML.</li>
+            <li>Open <strong>Mail &gt; Settings &gt; Signatures</strong>.</li>
+            <li>Choose the correct account, create a new signature, and paste into the signature area.</li>
+            <li>If Apple Mail restyles the block, remove extra formatting in the editor and paste again.</li>
+            <li>Attach the signature to the correct account and test by sending to a desktop and mobile inbox.</li>
+          </ol>
+        </section>
+
+        <section class="client-panel" data-panel="mobile">
+          <h3>iPhone, iPad, and Android</h3>
+          <ol class="instruction-list">
+            <li>Most native mobile mail apps do not preserve rich HTML signatures consistently.</li>
+            <li>Use <strong>Copy plain text</strong> and paste the fallback into the mobile signature setting if your device only supports plain text.</li>
+            <li>If your users primarily send from the Outlook mobile app, keep the desktop or web signature as the primary version and test whether the app syncs it as expected for their account.</li>
+            <li>After setup, send a message from the phone to confirm line breaks and contact labels remain readable.</li>
+          </ol>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 24px;">
+      <div class="panel-header">
+        <h2>What This Tool Enforces</h2>
+        <p>The generator is based on the current UAB brand guide page for email signatures and keeps the editable surface focused on the fields users actually need.</p>
+      </div>
+      <div class="panel-body">
+        <ul class="rule-list">
+          <li>Signature markup uses a Calibri-first font stack and a fixed 12 pt rendering target to stay within the published guidance.</li>
+          <li>The default template now matches your supplied signature layout and line order.</li>
+          <li>The name and title can render in UAB green or black. Your default template uses green.</li>
+          <li>Contact labels support the guide’s recommended style such as P, O, M, and F.</li>
+          <li>Blank fields are removed from the final output so users do not have to manually clean up separators or empty lines.</li>
+          <li>The builder includes a plain text fallback for mobile clients that strip HTML formatting.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const form = document.getElementById("signature-form");
+    const preview = document.getElementById("signaturePreview");
+    const htmlOutput = document.getElementById("htmlOutput");
+    const plainOutput = document.getElementById("plainOutput");
+    const complianceText = document.getElementById("complianceText");
+    const copyStatus = document.getElementById("copyStatus");
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function normalizePhone(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      return raw;
+    }
+
+    function normalizeUrl(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      if (/^https?:\/\//i.test(raw)) return raw;
+      return "https://" + raw.replace(/^\/+/, "");
+    }
+
+    function buildData() {
+      const data = Object.fromEntries(new FormData(form).entries());
+      return {
+        fullName: data.fullName.trim(),
+        credentials: data.credentials.trim(),
+        title: data.title.trim(),
+        department: data.department.trim(),
+        unit: data.unit.trim(),
+        email: data.email.trim(),
+        phoneLabel: data.phoneLabel.trim(),
+        phone: normalizePhone(data.phone),
+        secondaryLabel: data.secondaryLabel.trim(),
+        secondaryContact: normalizePhone(data.secondaryContact),
+        buildingOffice: data.buildingOffice.trim(),
+        street: data.street.trim(),
+        zipCode: data.zipCode.trim(),
+        website: data.website.trim(),
+        greenNameTitle: true,
+        includeUniversityLine: true,
+        includeWebsite: true,
+        includeAddress: true,
+        standardCompact: true
+      };
+    }
+
+    function buildSignatureHtml(data) {
+      const accent = data.greenNameTitle ? "#1E6B52" : "#000000";
+      const nameWithCreds = [data.fullName, data.credentials].filter(Boolean).join(", ");
+      const nameLine = data.standardCompact
+        ? [nameWithCreds, data.title].filter(Boolean).join(" | ")
+        : nameWithCreds;
+      const cityStateZip = data.zipCode ? `Birmingham, AL ${data.zipCode}` : "";
+      const addressLine = [data.buildingOffice, data.street, cityStateZip].filter(Boolean).join(" | ");
+      const contactParts = [];
+
+      if (data.phone) {
+        contactParts.push(
+          `<span style="white-space:nowrap;">${escapeHtml(data.phoneLabel)}: ${escapeHtml(data.phone)}</span>`
+        );
+      }
+
+      if (data.secondaryLabel && data.secondaryContact) {
+        contactParts.push(
+          `<span style="white-space:nowrap;">${escapeHtml(data.secondaryLabel)}: ${escapeHtml(data.secondaryContact)}</span>`
+        );
+      }
+
+      if (data.email) {
+        const safeEmail = escapeHtml(data.email);
+        contactParts.push(
+          data.standardCompact
+            ? `<span style="white-space:nowrap;"><a href="mailto:${safeEmail}" style="color:#0000FF; text-decoration:underline;">${safeEmail}</a></span>`
+            : `<span style="white-space:nowrap;"><strong>E:</strong> <a href="mailto:${safeEmail}" style="color:#000000; text-decoration:none;">${safeEmail}</a></span>`
+        );
+      }
+
+      const websiteLink = data.includeWebsite && data.website
+        ? `<div style="margin:0; color:#0000FF;"><a href="${escapeHtml(normalizeUrl(data.website))}" style="color:#0000FF; text-decoration:underline;">${escapeHtml(data.website)}</a></div>`
+        : "";
+
+      const addressBlock = data.includeAddress && addressLine
+        ? `<div style="margin:0; color:#000000;">${escapeHtml(addressLine)}</div>`
+        : "";
+
+      const departmentLine = data.department ? `      <div style="margin:0; color:#000000;">${escapeHtml(data.department)}</div>` : "";
+      const unitLine = data.unit ? `      <div style="margin:0; color:#000000;">${escapeHtml(data.unit)}</div>` : "";
+      const universityLine = data.includeUniversityLine
+        ? "      <div style=\"margin:0; color:#000000;\">UAB | The University of Alabama at Birmingham</div>"
+        : "";
+      const contactColor = "#000000";
+
+      return [
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-family:Calibri, Arial, Helvetica, sans-serif; font-size:12pt; line-height:1.3; color:#000000; max-width:560px;">',
+        "  <tr>",
+        '    <td style="padding:0; vertical-align:top;">',
+        `      <div style="font-size:12pt; font-weight:700; color:${accent}; margin:0;">${escapeHtml(nameLine || "Full Name")}</div>`,
+        !data.standardCompact && data.title ? `      <div style="font-size:12pt; color:${accent}; margin:0;">${escapeHtml(data.title)}</div>` : "",
+        departmentLine,
+        unitLine,
+        universityLine,
+        addressBlock,
+        contactParts.length ? `      <div style="margin:0; color:${contactColor};">${contactParts.join(' <span style="color:#98A2B3;">|</span> ')}</div>` : "",
+        data.includeWebsite && data.website ? '      <div style="margin:0; font-size:5pt; line-height:6px;">&nbsp;</div>' : "",
+        websiteLink ? '      <div style="margin:0; font-size:12pt; min-height:14px;">&nbsp;</div>' : "",
+        websiteLink,
+        "    </td>",
+        "  </tr>",
+        "</table>"
+      ].filter(Boolean).join("\n");
+    }
+
+    function buildPlainText(data) {
+      const lines = [];
+      const nameWithCreds = [data.fullName, data.credentials].filter(Boolean).join(", ");
+      const nameLine = data.standardCompact
+        ? [nameWithCreds, data.title].filter(Boolean).join(" | ")
+        : nameWithCreds;
+      const cityStateZip = data.zipCode ? `Birmingham, AL ${data.zipCode}` : "";
+      const addressLine = [data.buildingOffice, data.street, cityStateZip].filter(Boolean).join(" | ");
+      if (nameLine) lines.push(nameLine);
+      if (!data.standardCompact && data.title) lines.push(data.title);
+      if (data.department) lines.push(data.department);
+      if (data.unit) lines.push(data.unit);
+      if (data.includeUniversityLine) lines.push("UAB | The University of Alabama at Birmingham");
+
+      const contacts = [];
+      if (data.phone) contacts.push(`${data.phoneLabel}: ${data.phone}`);
+      if (data.secondaryLabel && data.secondaryContact) contacts.push(`${data.secondaryLabel}: ${data.secondaryContact}`);
+      if (data.email) contacts.push(data.email);
+      if (contacts.length) lines.push(contacts.join(" | "));
+
+      if (data.includeAddress && addressLine) lines.push(addressLine);
+      if (data.includeWebsite && data.website) {
+        lines.push("");
+        lines.push(data.website);
+      }
+
+      return lines.join("\n");
+    }
+
+    function updateComplianceText(data) {
+      const nameTitleColor = data.greenNameTitle ? "green" : "black";
+      const notes = [
+        "Font stack is Calibri-first and rendered at 12 pt.",
+        `Name and title are ${nameTitleColor}.`,
+        data.standardCompact ? "Your approved compact line order is active, including the extra organization and website lines." : "Expanded layout is active."
+      ];
+
+      if (!data.fullName || !data.title || !data.email) {
+        notes.push("Add name, title, and email before final deployment.");
+      }
+
+      complianceText.textContent = notes.join(" ");
+    }
+
+    function render() {
+      const data = buildData();
+      const signatureHtml = buildSignatureHtml(data);
+      const plainText = buildPlainText(data);
+
+      preview.innerHTML = signatureHtml;
+      htmlOutput.value = signatureHtml;
+      plainOutput.textContent = plainText;
+      updateComplianceText(data);
+    }
+
+    async function copyHtml() {
+      const html = htmlOutput.value;
+      const plain = plainOutput.textContent;
+
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          const item = new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([plain], { type: "text/plain" })
+          });
+          await navigator.clipboard.write([item]);
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(html);
+        } else {
+          htmlOutput.select();
+          document.execCommand("copy");
+        }
+        copyStatus.textContent = "Signature HTML copied. Paste it directly into your email client’s signature editor.";
+      } catch (error) {
+        copyStatus.textContent = "Clipboard access failed. Select the generated HTML box and copy it manually.";
+      }
+    }
+
+    async function copyPlain() {
+      try {
+        await navigator.clipboard.writeText(plainOutput.textContent);
+        copyStatus.textContent = "Plain text signature copied.";
+      } catch (error) {
+        copyStatus.textContent = "Clipboard access failed. Copy the plain text fallback manually.";
+      }
+    }
+
+    function downloadHtml() {
+      const blob = new Blob([htmlOutput.value], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const name = buildData().fullName || "uab-signature";
+      link.href = url;
+      link.download = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-signature.html";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      copyStatus.textContent = "HTML signature file downloaded.";
+    }
+
+    form.addEventListener("input", render);
+    document.getElementById("copyHtml").addEventListener("click", copyHtml);
+    document.getElementById("copyPlain").addEventListener("click", copyPlain);
+    document.getElementById("downloadHtml").addEventListener("click", downloadHtml);
+
+    document.querySelectorAll("[data-client]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const client = button.getAttribute("data-client");
+        document.querySelectorAll("[data-client]").forEach((el) => el.classList.toggle("is-active", el === button));
+        document.querySelectorAll("[data-panel]").forEach((panel) => {
+          panel.classList.toggle("is-active", panel.getAttribute("data-panel") === client);
+        });
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
