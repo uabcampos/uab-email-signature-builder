@@ -434,14 +434,14 @@
                 <input id="title" name="title" value="Communications Specialist">
               </div>
               <div>
-                <label for="department">Primary organization line</label>
-                <input id="department" name="department" value="Department of Medicine | Heersink School of Medicine">
+                <label for="department">Department</label>
+                <input id="department" name="department" value="Department of Medicine">
               </div>
             </div>
 
             <div class="field-row">
               <div>
-                <label for="unit">Secondary organization line</label>
+                <label for="unit">Division</label>
                 <input id="unit" name="unit" value="Division of General Internal Medicine &amp; Population Science">
               </div>
               <div>
@@ -453,7 +453,7 @@
             <div class="field-row">
               <div>
                 <label for="phone">Primary phone</label>
-                <input id="phone" name="phone" value="205.555.5555" placeholder="205.555.5555">
+                <input id="phone" name="phone" value="" placeholder="205.555.5555">
                 <div class="microcopy">Displayed using the selected contact label.</div>
               </div>
               <div>
@@ -502,7 +502,7 @@
                   <input id="zipCode" name="zipCode" value="35294" placeholder="ZIP code">
                 </div>
                 <div>
-                  <div class="microcopy" style="margin-top: 12px;">City and state are fixed as Birmingham, AL. Enter only the approved ZIP code for your unit.</div>
+                  <div class="microcopy" style="margin-top: 12px;">City and state are fixed as Birmingham, AL. Leave ZIP blank to omit the final location segment.</div>
                 </div>
               </div>
             </div>
@@ -523,7 +523,7 @@
           <div class="status-grid" aria-live="polite">
             <div class="status-card status-ok" id="complianceStatus">
               <strong>Brand guide alignment</strong>
-              <span id="complianceText">This signature uses a Calibri-family stack, stays at 12 pt, and defaults to the supplied standard RTF line order.</span>
+              <span id="complianceText">This signature uses a Calibri-family stack, stays at 12 pt, and always keeps the required `Name | Title` line plus the UAB Medicine line.</span>
             </div>
             <div class="status-card status-warn">
               <strong>Installation note</strong>
@@ -568,7 +568,7 @@
           </div>
 
           <div class="footer-note">
-            Your approved RTF uses this sequence: green bold <strong>Name | Title</strong>, a black school/department line, a black division line, <strong>UAB | The University of Alabama at Birmingham</strong>, a black address/location line, a black contact line with an underlined email, then a separate underlined website line.
+            The builder now requires only two lines: green bold <strong>Name | Title</strong> and <strong>UAB Medicine | Heersink School of Medicine</strong>. Every other line is optional and is omitted automatically when left blank.
           </div>
         </div>
       </section>
@@ -655,8 +655,8 @@
       <div class="panel-body">
         <ul class="rule-list">
           <li>Signature markup uses a Calibri-first font stack and a fixed 12 pt rendering target to stay within the published guidance.</li>
-          <li>The default template now matches your supplied signature layout and line order.</li>
-          <li>The name and title can render in UAB green or black. Your default template uses green.</li>
+          <li>The builder requires only the `Name | Title` line and the `UAB Medicine | Heersink School of Medicine` line.</li>
+          <li>The name and title can render in UAB green or black. The current template uses green.</li>
           <li>Contact labels support the guide’s recommended style such as P, O, M, and F.</li>
           <li>Blank fields are removed from the final output so users do not have to manually clean up separators or empty lines.</li>
           <li>The builder includes a plain text fallback for mobile clients that strip HTML formatting.</li>
@@ -713,7 +713,6 @@
         zipCode: data.zipCode.trim(),
         website: data.website.trim(),
         greenNameTitle: true,
-        includeUniversityLine: true,
         includeWebsite: true,
         includeAddress: true,
         standardCompact: true
@@ -759,22 +758,19 @@
         ? `<div style="margin:0; color:#000000;">${escapeHtml(addressLine)}</div>`
         : "";
 
-      const departmentLine = data.department ? `      <div style="margin:0; color:#000000;">${escapeHtml(data.department)}</div>` : "";
-      const unitLine = data.unit ? `      <div style="margin:0; color:#000000;">${escapeHtml(data.unit)}</div>` : "";
-      const universityLine = data.includeUniversityLine
-        ? "      <div style=\"margin:0; color:#000000;\">UAB | The University of Alabama at Birmingham</div>"
-        : "";
+      const orgLineText = [data.department, data.unit].filter(Boolean).join(" | ");
+      const orgLine = orgLineText ? `      <div style="margin:0; color:#000000;">${escapeHtml(orgLineText)}</div>` : "";
+      const schoolLine = '      <div style="margin:0; color:#000000;">UAB Medicine | Heersink School of Medicine</div>';
       const contactColor = "#000000";
 
       return [
         '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-family:Calibri, Arial, Helvetica, sans-serif; font-size:12pt; line-height:1.3; color:#000000; max-width:560px;">',
         "  <tr>",
         '    <td style="padding:0; vertical-align:top;">',
-        `      <div style="font-size:12pt; font-weight:700; color:${accent}; margin:0;">${escapeHtml(nameLine || "Full Name")}</div>`,
+        `      <div style="font-size:12pt; font-weight:700; color:${accent}; margin:0;">${escapeHtml(nameLine || "Full Name | Title")}</div>`,
         !data.standardCompact && data.title ? `      <div style="font-size:12pt; color:${accent}; margin:0;">${escapeHtml(data.title)}</div>` : "",
-        departmentLine,
-        unitLine,
-        universityLine,
+        orgLine,
+        schoolLine,
         addressBlock,
         contactParts.length ? `      <div style="margin:0; color:${contactColor};">${contactParts.join(' <span style="color:#98A2B3;">|</span> ')}</div>` : "",
         data.includeWebsite && data.website ? '      <div style="margin:0; font-size:5pt; line-height:6px;">&nbsp;</div>' : "",
@@ -794,11 +790,11 @@
         : nameWithCreds;
       const cityStateZip = data.zipCode ? `Birmingham, AL ${data.zipCode}` : "";
       const addressLine = [data.buildingOffice, data.street, cityStateZip].filter(Boolean).join(" | ");
+      const orgLineText = [data.department, data.unit].filter(Boolean).join(" | ");
       if (nameLine) lines.push(nameLine);
       if (!data.standardCompact && data.title) lines.push(data.title);
-      if (data.department) lines.push(data.department);
-      if (data.unit) lines.push(data.unit);
-      if (data.includeUniversityLine) lines.push("UAB | The University of Alabama at Birmingham");
+      if (orgLineText) lines.push(orgLineText);
+      lines.push("UAB Medicine | Heersink School of Medicine");
 
       const contacts = [];
       if (data.phone) contacts.push(`${data.phoneLabel}: ${data.phone}`);
@@ -820,11 +816,11 @@
       const notes = [
         "Font stack is Calibri-first and rendered at 12 pt.",
         `Name and title are ${nameTitleColor}.`,
-        data.standardCompact ? "Your approved compact line order is active, including the extra organization and website lines." : "Expanded layout is active."
+        data.standardCompact ? "Only the name/title line and UAB Medicine line are required; all other lines are optional." : "Expanded layout is active."
       ];
 
-      if (!data.fullName || !data.title || !data.email) {
-        notes.push("Add name, title, and email before final deployment.");
+      if (!data.fullName || !data.title) {
+        notes.push("Add both name and title before final deployment.");
       }
 
       complianceText.textContent = notes.join(" ");
